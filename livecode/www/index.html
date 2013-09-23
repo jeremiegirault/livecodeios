@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+	<head>
+		<style type="text/css">
+			.board {
+				position: relative;
+				width: 320px;
+				height: 568px;
+				margin-left: auto;
+				margin-right: auto;
+
+				overflow: hidden;
+
+				background-color: white;
+			}
+
+			.token {
+				position: absolute;
+				background-color: red;
+			}
+
+			.error {
+				color: red;
+				text-align: center;
+				display: none;
+			}
+			.win {
+				color: green;
+				text-align: center;
+				display: none;
+			}
+
+			body {
+				background-color: black;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="board">
+			<div id="token" class="token" style="display:none"></div>
+			<div class="error"></div>
+			<div class="win"></div>
+		</div>
+
+		<script src="jquery.min.js"></script>
+		<script>
+			$(function() {
+				var SIZE = 32;
+
+				var token = $('.token');
+				var win = $('.win');
+
+				token.css({
+					'display' : 'none',
+					'width' : SIZE+'px',
+					'height' : SIZE+'px',
+					'border-radius' : (SIZE*0.5)+'px'
+				});
+
+				function error(msg) {
+					token.fadeOut();
+					$('.error').html('ERROR :'+msg).fadeIn();
+				}
+
+				function winGame() {
+					token.fadeOut();
+					win.html('Congratulations, you won !\nWaiting for another game...').fadeIn();
+				}
+
+				function move(x, y) {
+					win.fadeOut();
+					var top = y - SIZE*0.5;
+					var left = x - SIZE*0.5;
+					token.css({
+						'display' : 'block',
+						'left' : left+'px',
+						'top' : top+'px'
+					});
+				}
+
+				if ("WebSocket" in window) {
+					var ws = new WebSocket("%%WEBSOCKET_URL%%/game");
+					ws.onmessage = function(evt) {
+						var data = JSON.parse(evt.data);
+						if(data) {
+							if(data.action == 'move') {
+								move(data.x, data.y);
+							}
+						}
+					};
+					ws.onopen = function() {
+						console.log('connected');
+					}
+					ws.onclose = function() {
+						error('Connection closed');
+						ws = null;
+					};
+
+					token.click(function() {
+						if(ws) {
+							ws.send(JSON.stringify({ 'action' : 'touched' }));
+							winGame();
+						}
+					});
+				}
+				else {
+					alert("Your browser doesn't support WebSocket!");
+				}
+			});
+		</script>
+	</body>
+</html>
